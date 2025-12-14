@@ -1,0 +1,15 @@
+# Core dependencies
+# No hard dependencies - everything is optional
+
+# Optional: For LLM-as-judge evaluation
+openai>=1.0.0  # Optional
+anthropic>=0.18.0  # Optional
+
+# Optional: For framework adaptors
+crewai>=0.1.0  # Optional
+langchain>=0.1.0  # Optional
+langchain-core>=0.1.0  # Optional
+langgraph>=0.0.1  # Optional
+pyautogen>=0.2.0  # Optional
+litellm>=1.0.0  # Optional
+

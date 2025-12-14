@@ -65,18 +65,25 @@ def _extract_llm_call(kwargs: dict, response, duration: float) -> LLMCall:
     # Extract messages
     messages = kwargs.get("messages", [])
     
-    # Extract response text
+    # Extract response text with error handling
     response_text = ""
-    if hasattr(response, "choices") and response.choices:
-        if hasattr(response.choices[0], "message"):
-            response_text = response.choices[0].message.content or ""
+    try:
+        if hasattr(response, "choices") and response.choices:
+            choice = response.choices[0]
+            if hasattr(choice, "message") and choice.message:
+                response_text = choice.message.content or ""
+    except (IndexError, AttributeError, TypeError):
+        pass
     
-    # Extract token counts
+    # Extract token counts with error handling
     tokens_in = 0
     tokens_out = 0
-    if hasattr(response, "usage"):
-        tokens_in = getattr(response.usage, "prompt_tokens", 0)
-        tokens_out = getattr(response.usage, "completion_tokens", 0)
+    try:
+        if hasattr(response, "usage") and response.usage:
+            tokens_in = getattr(response.usage, "prompt_tokens", 0)
+            tokens_out = getattr(response.usage, "completion_tokens", 0)
+    except (AttributeError, TypeError):
+        pass
     
     return LLMCall(
         model=kwargs.get("model", "unknown"),

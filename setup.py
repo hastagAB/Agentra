@@ -15,7 +15,7 @@ setup(
     description="Live Agent Instrumentation & Evaluation",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/agentra",
+    url="https://github.com/hastagab/agentra",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -24,11 +24,12 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
     ],
-    python_requires=">=3.10",
+    python_requires=">=3.9",
     install_requires=[
         # No hard dependencies - all optional
     ],

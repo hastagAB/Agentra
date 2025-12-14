@@ -45,30 +45,6 @@ def patch_openai():
         
         openai.chat.completions.create = patched_create
         
-        # Patch async create if available
-        try:
-            from openai import AsyncOpenAI
-            _original_async_create = AsyncOpenAI().chat.completions.create
-            
-            async def patched_async_create(self, *args, **kwargs):
-                ctx = CaptureContext.get_current()
-                start = time.time()
-                
-                # Call original
-                response = await _original_async_create(*args, **kwargs)
-                
-                duration = (time.time() - start) * 1000
-                
-                # Capture if in traced context
-                if ctx:
-                    ctx.add_llm_call(_extract_llm_call(kwargs, response, duration))
-                
-                return response
-            
-            # This patching is simplified - in production you'd need more careful async patching
-        except:
-            pass
-        
         _patched = True
         
     except ImportError:
@@ -91,18 +67,25 @@ def _extract_llm_call(kwargs: dict, response, duration: float) -> LLMCall:
     # Extract messages
     messages = kwargs.get("messages", [])
     
-    # Extract response text
+    # Extract response text with error handling
     response_text = ""
-    if hasattr(response, "choices") and response.choices:
-        if hasattr(response.choices[0], "message"):
-            response_text = response.choices[0].message.content or ""
+    try:
+        if hasattr(response, "choices") and response.choices:
+            choice = response.choices[0]
+            if hasattr(choice, "message") and choice.message:
+                response_text = choice.message.content or ""
+    except (IndexError, AttributeError, TypeError):
+        pass
     
-    # Extract token counts
+    # Extract token counts with error handling
     tokens_in = 0
     tokens_out = 0
-    if hasattr(response, "usage"):
-        tokens_in = response.usage.prompt_tokens if hasattr(response.usage, "prompt_tokens") else 0
-        tokens_out = response.usage.completion_tokens if hasattr(response.usage, "completion_tokens") else 0
+    try:
+        if hasattr(response, "usage") and response.usage:
+            tokens_in = getattr(response.usage, "prompt_tokens", 0)
+            tokens_out = getattr(response.usage, "completion_tokens", 0)
+    except (AttributeError, TypeError):
+        pass
     
     return LLMCall(
         model=kwargs.get("model", "unknown"),

@@ -4,7 +4,7 @@ Core data types for Agentra.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 from enum import Enum
 
 
@@ -31,7 +31,7 @@ class ToolCall:
     name: str
     input: dict
     output: Any = None
-    error: str | None = None
+    error: Optional[str] = None
     duration_ms: float = 0
     timestamp: datetime = field(default_factory=datetime.now)
 
@@ -40,21 +40,21 @@ class ToolCall:
 class AgentSpan:
     """Tracks one agent's execution (for multi-agent systems)."""
     name: str
-    role: str | None = None
+    role: Optional[str] = None
     start_time: datetime = field(default_factory=datetime.now)
-    end_time: datetime | None = None
+    end_time: Optional[datetime] = None
     llm_calls: list[LLMCall] = field(default_factory=list)
     tool_calls: list[ToolCall] = field(default_factory=list)
     input: Any = None
     output: Any = None
-    error: str | None = None
+    error: Optional[str] = None
 
 
 @dataclass
 class Trace:
     """Complete trace of one execution."""
     id: str
-    name: str | None = None  # User-provided name for this run
+    name: Optional[str] = None  # User-provided name for this run
     input: Any = None
     output: Any = None
     
@@ -65,10 +65,10 @@ class Trace:
     
     # Metadata
     start_time: datetime = field(default_factory=datetime.now)
-    end_time: datetime | None = None
+    end_time: Optional[datetime] = None
     duration_ms: float = 0
-    error: str | None = None
-    framework: str | None = None  # "crewai", "langchain", etc.
+    error: Optional[str] = None
+    framework: Optional[str] = None  # "crewai", "langchain", etc.
     metadata: dict = field(default_factory=dict)
     
     @property
@@ -107,7 +107,7 @@ class CategoryResult:
 class TraceResult:
     """Evaluation result for a single trace."""
     trace_id: str
-    trace_name: str | None
+    trace_name: Optional[str]
     score: float
     categories: list[CategoryResult]
     issues: list[str]

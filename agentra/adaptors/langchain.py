@@ -85,17 +85,30 @@ class LangChainAdaptor(BaseAdaptor):
     def instrument(self, chain) -> None:
         """Instrument a LangChain chain/agent."""
         
-        original_invoke = chain.invoke
+        # Try different method names based on LangChain version
+        if hasattr(chain, "invoke") and callable(chain.invoke):
+            original_method = chain.invoke
+            method_name = "invoke"
+        elif hasattr(chain, "run") and callable(chain.run):
+            original_method = chain.run
+            method_name = "run"
+        elif hasattr(chain, "__call__") and callable(chain.__call__):
+            original_method = chain.__call__
+            method_name = "__call__"
+        else:
+            # Can't instrument this chain
+            return
+        
         handler = self.get_callback_handler()
         
-        def wrapped_invoke(input, config=None, **kwargs):
+        def wrapped_method(input, config=None, **kwargs):
             config = config or {}
             callbacks = config.get("callbacks", [])
             callbacks.append(handler)
             config["callbacks"] = callbacks
             
             with self.agentra.trace():
-                return original_invoke(input, config=config, **kwargs)
+                return original_method(input, config=config, **kwargs)
         
-        chain.invoke = wrapped_invoke
+        setattr(chain, method_name, wrapped_method)
 

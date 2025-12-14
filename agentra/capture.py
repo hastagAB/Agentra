@@ -5,6 +5,7 @@ Uses contextvars to track current trace across async boundaries.
 
 from contextvars import ContextVar
 from typing import Optional
+from datetime import datetime
 import uuid
 import time
 
@@ -94,8 +95,4 @@ class CaptureContext:
             "data": data,
             "timestamp": time.time(),
         })
-
-
-# Import datetime here to avoid circular import
-from datetime import datetime
 

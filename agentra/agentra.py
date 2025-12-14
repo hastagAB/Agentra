@@ -4,7 +4,7 @@ Main Agentra class - primary interface for agent instrumentation.
 
 import random
 from functools import wraps
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 from contextlib import contextmanager
 
 from .types import Trace, EvaluationResult
@@ -58,7 +58,7 @@ class Agentra:
         self._traces: list[Trace] = []
         
         # Latest evaluation result
-        self._latest_result: EvaluationResult | None = None
+        self._latest_result: Optional[EvaluationResult] = None
         
         # Auto-patch LLM clients
         if auto_patch:

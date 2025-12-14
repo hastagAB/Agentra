@@ -52,29 +52,47 @@ class AutoGenAdaptor(BaseAdaptor):
     
     def instrument_agent(self, agent):
         """Instrument a single AutoGen agent."""
-        try:
-            # Hook into agent's generate_reply method
-            original_generate_reply = agent.generate_reply
+        # Try multiple possible method names
+        methods_to_try = ['generate_reply', 'generate_response', 'reply']
+        
+        for method_name in methods_to_try:
+            if not hasattr(agent, method_name):
+                continue
             
-            def wrapped_generate_reply(messages=None, sender=None, **kwargs):
-                agent_name = getattr(agent, "name", "agent")
+            try:
+                original_method = getattr(agent, method_name)
+                if not callable(original_method):
+                    continue
                 
-                self.on_agent_start(
-                    name=agent_name,
-                    role=getattr(agent, "system_message", None),
-                    input=messages[-1] if messages else None
-                )
+                def make_wrapper(original):
+                    def wrapped_method(messages=None, sender=None, **kwargs):
+                        agent_name = getattr(agent, "name", "agent")
+                        
+                        # Extract last message safely
+                        last_msg = None
+                        if messages:
+                            try:
+                                last_msg = messages[-1] if isinstance(messages, list) else str(messages)[:100]
+                            except (IndexError, TypeError):
+                                pass
+                        
+                        self.on_agent_start(
+                            name=agent_name,
+                            role=getattr(agent, "system_message", None),
+                            input=last_msg
+                        )
+                        
+                        try:
+                            reply = original(messages=messages, sender=sender, **kwargs)
+                            self.on_agent_end(name=agent_name, output=reply)
+                            return reply
+                        except Exception as e:
+                            self.on_agent_end(name=agent_name, error=str(e))
+                            raise
+                    return wrapped_method
                 
-                try:
-                    reply = original_generate_reply(messages=messages, sender=sender, **kwargs)
-                    self.on_agent_end(name=agent_name, output=reply)
-                    return reply
-                except Exception as e:
-                    self.on_agent_end(name=agent_name, error=str(e))
-                    raise
-            
-            agent.generate_reply = wrapped_generate_reply
-        except AttributeError:
-            # Method doesn't exist or different API
-            pass
+                setattr(agent, method_name, make_wrapper(original_method))
+                break  # Successfully patched
+            except (AttributeError, TypeError):
+                continue
 

@@ -149,32 +149,57 @@ Your evaluation:"""
     
     def _parse_response(self, response: str) -> Score:
         """Parse LLM response into Score."""
-        lines = response.strip().split("\n")
+        if not response or not isinstance(response, str):
+            return Score(0.5, "Invalid response format", {"raw_response": str(response)})
         
+        lines = response.strip().split("\n")
         score_value = 0.5
         reason = "Could not parse evaluation"
         
+        # Try to parse SCORE and REASON lines
         for line in lines:
             line = line.strip()
-            if line.startswith("SCORE:"):
+            
+            # Try "SCORE:" format (case-insensitive)
+            if "SCORE:" in line.upper():
                 try:
-                    score_str = line.replace("SCORE:", "").strip()
-                    score_value = float(score_str)
-                    score_value = max(0.0, min(1.0, score_value))  # Clamp to [0, 1]
-                except ValueError:
+                    parts = line.split(":", 1)
+                    if len(parts) == 2:
+                        score_str = parts[1].strip()
+                        score_value = float(score_str)
+                        score_value = max(0.0, min(1.0, score_value))  # Clamp to [0, 1]
+                except (ValueError, IndexError):
                     pass
-            elif line.startswith("REASON:"):
-                reason = line.replace("REASON:", "").strip()
+            
+            # Try "REASON:" format (case-insensitive)
+            elif "REASON:" in line.upper():
+                try:
+                    parts = line.split(":", 1)
+                    if len(parts) == 2:
+                        reason = parts[1].strip()
+                except IndexError:
+                    pass
         
-        # If no REASON: prefix found, use all text after score
+        # If no REASON found, use text after SCORE line
         if reason == "Could not parse evaluation":
-            # Find text after SCORE line
-            score_line_idx = next((i for i, line in enumerate(lines) if "SCORE:" in line), -1)
+            score_line_idx = next((i for i, line in enumerate(lines) if "SCORE:" in line.upper()), -1)
             if score_line_idx >= 0 and score_line_idx < len(lines) - 1:
                 reason = "\n".join(lines[score_line_idx + 1:]).strip()
                 # Remove REASON: prefix if present
-                if reason.startswith("REASON:"):
-                    reason = reason.replace("REASON:", "").strip()
+                if reason.upper().startswith("REASON:"):
+                    reason = reason[7:].strip()
+        
+        # Fallback: try to extract any number from response if score still default
+        if score_value == 0.5 and reason == "Could not parse evaluation":
+            import re
+            numbers = re.findall(r'\b0?\.\d+\b|\b1\.0\b|\b0\b', response)
+            if numbers:
+                try:
+                    score_value = float(numbers[0])
+                    score_value = max(0.0, min(1.0, score_value))
+                    reason = "Extracted score from response text"
+                except ValueError:
+                    pass
         
         return Score(
             value=score_value,

@@ -66,31 +66,46 @@ class CrewAIAdaptor(BaseAdaptor):
     
     def _instrument_agent(self, agent):
         """Add callbacks to a CrewAI agent."""
-        # Hook into agent's execute method to track agent spans
-        # This is simplified - actual implementation depends on CrewAI version
+        # Try multiple possible method names based on CrewAI version
+        methods_to_try = ['execute_task', 'execute', 'run']
         
-        try:
-            original_execute = agent.execute_task
+        for method_name in methods_to_try:
+            if not hasattr(agent, method_name):
+                continue
             
-            def wrapped_execute(task, *args, **kwargs):
-                agent_name = getattr(agent, "role", "agent")
+            try:
+                original_method = getattr(agent, method_name)
+                if not callable(original_method):
+                    continue
                 
-                self.on_agent_start(
-                    name=agent_name,
-                    role=getattr(agent, "role", None),
-                    input=getattr(task, "description", None)
-                )
+                def make_wrapper(original):
+                    def wrapped_execute(task, *args, **kwargs):
+                        agent_name = getattr(agent, "role", getattr(agent, "name", "agent"))
+                        
+                        # Handle task input safely
+                        task_input = None
+                        if hasattr(task, "description"):
+                            task_input = task.description
+                        elif isinstance(task, str):
+                            task_input = task[:100]
+                        
+                        self.on_agent_start(
+                            name=agent_name,
+                            role=getattr(agent, "role", None),
+                            input=task_input
+                        )
+                        
+                        try:
+                            result = original(task, *args, **kwargs)
+                            self.on_agent_end(name=agent_name, output=result)
+                            return result
+                        except Exception as e:
+                            self.on_agent_end(name=agent_name, error=str(e))
+                            raise
+                    return wrapped_execute
                 
-                try:
-                    result = original_execute(task, *args, **kwargs)
-                    self.on_agent_end(name=agent_name, output=result)
-                    return result
-                except Exception as e:
-                    self.on_agent_end(name=agent_name, error=str(e))
-                    raise
-            
-            agent.execute_task = wrapped_execute
-        except AttributeError:
-            # Method doesn't exist or different API
-            pass
+                setattr(agent, method_name, make_wrapper(original_method))
+                break  # Successfully patched
+            except (AttributeError, TypeError):
+                continue
 

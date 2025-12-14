@@ -8,7 +8,7 @@ Get up and running with Agentra in 5 minutes.
 # Basic installation
 pip install -e .
 
-# With OpenAI support (recommended for evaluation)
+# With OpenAI support for evaluation
 pip install -e . openai
 export OPENAI_API_KEY=your_key
 ```

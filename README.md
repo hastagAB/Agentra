@@ -106,7 +106,7 @@ print(comparison)
 pip install agentra
 ```
 
-For LLM-based evaluation (recommended):
+For LLM-based evaluation:
 ```bash
 pip install agentra openai  # or anthropic
 export OPENAI_API_KEY=your_key
